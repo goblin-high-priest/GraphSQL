@@ -23,7 +23,7 @@ CREATE TABLE TAb (
 
 -- 初始化起点 s, 终点 t
 INSERT INTO TAf (nid, p2s, d2s, fwd) VALUES ('s', 's', 0, 1);
-INSERT INTO TAb (nid, p2s, d2t, bwd) VALUES ('f', 'f', 0, 1);
+INSERT INTO TAb (nid, p2s, d2t, bwd) VALUES ('h', 'h', 0, 1);
 
 CREATE TABLE TE (
     fid VARCHAR(10),
@@ -302,7 +302,7 @@ BEGIN
 	RAISE NOTICE 'xid is %', xid;
 	RETURN xid;
 	-- PERFORM compute_path(xid);
-END ;
+END;
 $$ LANGUAGE plpgsql;
 
 -- SELECT * FROM ER;
@@ -365,4 +365,5 @@ END;
 $$;
 
 SELECT * FROM path;
-
+select * from TAf;
+select * from TAb;

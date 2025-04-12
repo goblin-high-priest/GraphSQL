@@ -339,8 +339,8 @@ RETURNS VARCHAR(10) AS $$
 DECLARE
     MAX CONSTANT INT := 999999;
     min_cost INT := MAX;
-    min_d2s INT := MAX;
-    min_d2t INT := MAX;
+    -- min_d2s INT := MAX;
+    -- min_d2t INT := MAX;
     lf INT := 0;
     lb INT := 0;
     nf INT := 1;
@@ -350,7 +350,7 @@ DECLARE
     xid VARCHAR(10) := '';
 BEGIN
     INSERT INTO TVisited (p2s, d2s, f, nid) VALUES ('s', 0, 0, 's');
-    INSERT INTO TVisited (nid, b, d2t, p2t) VALUES ('t', 0, 0, 't');
+    INSERT INTO TVisited (nid, b, d2t, p2t) VALUES ('h', 0, 0, 'h');
 
     WHILE lb + lf <= min_cost AND nf > 0 AND nb > 0 LOOP
 
@@ -369,7 +369,7 @@ BEGIN
 
             UPDATE TVisited SET f = 1 WHERE f = 2;
 
-            SELECT MIN(d2s) INTO min_d2s FROM TVisited WHERE f = 0;
+            SELECT MIN(d2s) INTO lf FROM TVisited WHERE f = 0;
 
             fwd := fwd + 1;
         ELSE
@@ -387,7 +387,7 @@ BEGIN
 
             UPDATE TVisited SET b = 1 WHERE b = 2;
 
-            SELECT MIN(d2t) INTO min_d2t FROM TVisited WHERE b = 0;
+            SELECT MIN(d2t) INTO lb FROM TVisited WHERE b = 0;
 
             bwd := bwd + 1;
 

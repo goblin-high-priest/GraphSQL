@@ -19,6 +19,21 @@ CREATE TABLE TE (
     FOREIGN KEY (tid) REFERENCES TN(nid)
 );
 
+------------------------------------------------------------
+-- 2) 创建 TA 表，并插入起点 's'
+------------------------------------------------------------
+DROP TABLE IF EXISTS TA;
+
+CREATE TABLE TA (
+    nid VARCHAR(10) PRIMARY KEY,  -- 节点 ID
+    d2s INT DEFAULT 999999,       -- 源点到该节点的最短距离
+    p2s VARCHAR(10),              -- 前驱节点
+    ff INT DEFAULT 0              -- 0=未确定, 1=已确定
+);
+
+-- 初始化：插入起点 s（距离=0, 前驱=s, ff=0）
+INSERT INTO TA (nid, d2s, p2s, ff) VALUES ('s', 0, 's', 0);
+
 -- 示例：插入节点
 INSERT INTO TN (nid) VALUES 
     ('s'), ('b'), ('c'), ('d'), ('e'), 
@@ -46,22 +61,6 @@ INSERT INTO TE (fid, tid, cost) VALUES
     ('i', 'h', 1),
     ('i', 't', 2),
     ('j', 't', 9);
-
-------------------------------------------------------------
--- 2) 创建 TA 表，并插入起点 's'
-------------------------------------------------------------
-DROP TABLE IF EXISTS TA;
-
-CREATE TABLE TA (
-    nid VARCHAR(10) PRIMARY KEY,  -- 节点 ID
-    d2s INT DEFAULT 999999,       -- 源点到该节点的最短距离
-    p2s VARCHAR(10),              -- 前驱节点
-    ff INT DEFAULT 0              -- 0=未确定, 1=已确定
-);
-
--- 初始化：插入起点 s（距离=0, 前驱=s, ff=0）
-INSERT INTO TA (nid, d2s, p2s, ff) VALUES ('s', 0, 's', 0);
-
 ------------------------------------------------------------
 -- 3) 以单向 Dijkstra 方式，循环取距离最小的 ff=0 节点并扩展
 ------------------------------------------------------------
@@ -74,30 +73,19 @@ BEGIN
     LOOP
         -- (a) 从 TA 中选取尚未确定(ff=0)且距离 d2s 最小的节点
         SELECT nid INTO mid
-          FROM TA
-         WHERE ff = 0
-         ORDER BY d2s
-         LIMIT 1;
+        FROM TA
+        WHERE ff = 0
+        ORDER BY d2s
+        LIMIT 1;
 
         -- 若没有任何 ff=0 节点，则说明搜索完成，退出循环
-        -- IF NOT FOUND THEN
-        --     EXIT;
-        -- END IF;
 		EXIT WHEN NOT FOUND;
 
         -- 若该节点就是目标 t，则退出循环
-        -- IF mid = 'f' THEN
-        --     EXIT;
-        -- END IF;
 		EXIT WHEN mid = 'f';
-
-        -- (b) 删除旧的临时视图（若存在），并创建新的视图 ER
-        --     用于存储从 mid 出发时，对邻居节点的候选更新
-        EXECUTE 'DROP VIEW IF EXISTS ER2';
-        EXECUTE 'DROP VIEW IF EXISTS ER';
 		
         EXECUTE format($exp$
-            CREATE VIEW ER AS
+            CREATE OR REPLACE VIEW ER AS
             SELECT 
                 TE.tid           AS nid,        -- 邻居节点 ID
                 TE.fid           AS p2s,        -- 前驱是当前节点
@@ -108,33 +96,26 @@ BEGIN
             AND TA.ff = 0
         $exp$, mid);
 
-        -- (c) 对 ER 中的记录，用窗口函数一次性选出同一邻居节点中 cost 最小的那个
-        EXECUTE $wfunc$
-            CREATE VIEW ER2 AS
-            SELECT nid, p2s, cost
-            FROM (
-                SELECT
-                    ER.nid  AS nid,
-                    ER.p2s  AS p2s,
-                    ER.cost AS cost,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY ER.nid
-                        ORDER BY ER.cost
-                    ) AS rk
-                FROM ER
-            ) tmp
-            WHERE rk = 1
-        $wfunc$;
-
         -- (d) 用 MERGE 语句把这些候选更新 合并到 TA 里
         MERGE INTO TA AS target
-        USING ER2 AS source
+        USING (
+            SELECT nid, p2s, cost
+            FROM (
+                SELECT 
+                    nid, p2s, cost,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY nid
+                        ORDER BY cost
+                    ) AS rownum
+                FROM ER
+            )
+            WHERE rownum = 1
+        ) AS source
         ON (source.nid = target.nid)
         WHEN MATCHED AND target.d2s > source.cost THEN
             UPDATE SET 
                 d2s = source.cost,
-                p2s = source.p2s,
-                ff  = 0   -- 若发现更优距离，重置 ff=0，表示还可继续改进
+                p2s = source.p2s
         WHEN NOT MATCHED THEN
             INSERT (nid, d2s, p2s, ff)
             VALUES (source.nid, source.cost, source.p2s, 0);
@@ -144,13 +125,12 @@ BEGIN
 		GET DIAGNOSTICS affected_count = ROW_COUNT;
 		EXIT WHEN affected_count = 0;
 
-        -- (e) 把 mid 标记为已确定
         UPDATE TA
         SET ff = 1
         WHERE nid = mid;
 
     END LOOP;
-END
+END;
 $$;
 
 ------------------------------------------------------------
@@ -172,5 +152,7 @@ WITH RECURSIVE path AS (
 	  WHERE TA.p2s <> TA.nid -- 避免死循环
 )
 
--- SELECT * FROM TA;
 SELECT * FROM path;
+
+-- select * from er;
+-- SELECT * FROM TA;
