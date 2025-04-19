@@ -93,7 +93,7 @@ BEGIN
             FROM TA 
             JOIN TE ON TA.nid = TE.fid
             WHERE TA.nid = %L
-            AND TA.ff = 0
+            -- AND TA.ff = 0
         $exp$, mid);
 
         -- (d) 用 MERGE 语句把这些候选更新 合并到 TA 里
@@ -140,7 +140,7 @@ WITH RECURSIVE path AS (
     -- 起点：目标节点 t
     SELECT nid, p2s
       FROM TA
-     WHERE nid = 't'
+     WHERE nid = 'h'
 
     UNION ALL
 

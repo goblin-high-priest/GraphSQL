@@ -25,7 +25,7 @@ CREATE TABLE TAb (
 
 -- 初始化起点 s, 终点 t
 INSERT INTO TAf (nid, p2s, d2s, f) VALUES ('s', 's', 0, 0);
-INSERT INTO TAb (nid, p2s, d2t, b) VALUES ('h', 'h', 0, 0);
+INSERT INTO TAb (nid, p2s, d2t, b) VALUES ('f', 'f', 0, 0);
 
 CREATE TABLE TE (
     fid VARCHAR(10),
@@ -44,15 +44,23 @@ INSERT INTO TE VALUES
     ('i','t',2), ('j','t',9);
 
 CREATE OR REPLACE FUNCTION build_forward_er_view()
-RETURNS VOID AS $$
+RETURNS VARCHAR AS $$
+DECLARE
+    mid VARCHAR(10);
 BEGIN
-    UPDATE TAf
-    SET f = 2
-    WHERE TAf.d2s = (
-        SELECT MIN(d2s) FROM TAf 
-        WHERE TAf.f = 0
-    );
+    -- UPDATE TAf
+    -- SET f = 2
+    -- WHERE TAf.d2s = (
+    --     SELECT MIN(d2s) FROM TAf 
+    --     WHERE TAf.f = 0
+    -- );
+    SELECT nid INTO mid
+    FROM TAf
+    WHERE f = 0
+    ORDER BY d2s
+    LIMIT 1;
 
+    EXECUTE format($forward_er$
     CREATE OR REPLACE VIEW er AS
     SELECT
         TE.tid            AS nid,
@@ -60,11 +68,13 @@ BEGIN
         TAf.d2s + TE.cost AS cost
     FROM TE, TAf
     WHERE TE.fid = TAf.nid
-    AND TAf.f = 2;
+    AND TAf.nid = %L
+    $forward_er$, mid);
+    RETURN mid;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION merge_forward()
+CREATE OR REPLACE FUNCTION merge_forward(mid VARCHAR)
 RETURNS INT AS $$
 DECLARE
     affected_count INT;
@@ -94,23 +104,33 @@ BEGIN
     GET DIAGNOSTICS affected_count = ROW_COUNT;
     RAISE NOTICE 'affected_count is %', affected_count;
 
+    -- UPDATE TAf
+    -- SET f = 1
+    -- WHERE TAf.f = 2;
     UPDATE TAf
     SET f = 1
-    WHERE TAf.f = 2;
+    WHERE TAf.nid = mid;
 
     RETURN affected_count;    
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION build_backward_er_view()
-RETURNS VOID AS $$
+RETURNS VARCHAR AS $$
+DECLARE
+    mid VARCHAR(10);
 BEGIN
-    UPDATE TAb
-    SET b = 2
-    WHERE TAb.d2t = (
-        SELECT MIN(d2t) FROM TAb 
-        WHERE TAb.b = 0
-    );
+    -- UPDATE TAb
+    -- SET b = 2
+    -- WHERE TAb.d2t = (
+    --     SELECT MIN(d2t) FROM TAb 
+    --     WHERE TAb.b = 0
+    -- );
+    SELECT nid INTO mid
+    FROM TAb
+    WHERE b = 0
+    ORDER BY d2t
+    LIMIT 1;
 
     CREATE OR REPLACE VIEW er AS
     SELECT
@@ -120,10 +140,12 @@ BEGIN
     FROM TE, TAb
     WHERE TE.tid = TAb.nid
     AND TAb.b = 2;
+
+    RETURN mid;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION merge_backward()
+CREATE OR REPLACE FUNCTION merge_backward(mid VARCHAR)
 RETURNS INT AS $$
 DECLARE
     affected_count INT;
@@ -153,9 +175,12 @@ BEGIN
     GET DIAGNOSTICS affected_count = ROW_COUNT;
     RAISE NOTICE 'affected_count is %', affected_count;
 
+    -- UPDATE TAb
+    -- SET b = 1
+    -- WHERE TAb.b = 2;
     UPDATE TAb
     SET b = 1
-    WHERE TAb.b = 2;
+    WHERE TAb.nid = mid;
 
     RETURN affected_count;
 END;
@@ -175,23 +200,34 @@ DECLARE
     nb INT := 1;
     fwd INT := 1;
     bwd INT := 1; 
+    mid VARCHAR(10);
     xid VARCHAR(10) := '';
 BEGIN
     WHILE lb + lf < min_cost AND nf > 0 AND nb > 0 LOOP
 
         IF nf <= nb THEN
-            PERFORM build_forward_er_view();
+            mid := build_forward_er_view();
             
-            nf := merge_forward();
+            nf := merge_forward(mid);
+
+            IF nf = 0 THEN
+                nf := MAX;
+            END IF;
+
             RAISE NOTICE 'nf is %', nf;
-            SELECT MIN(d2s) INTO lf FROM TAf WHERE f = 0;
+            SELECT COALESCE(MIN(d2s), 0) INTO lf FROM TAf WHERE f = 0;
             RAISE NOTICE 'lf is %', lf;
         ELSE
-            PERFORM build_backward_er_view();
+            mid := build_backward_er_view();
             
-            nb := merge_backward();
+            nb := merge_backward(mid);
+
+            IF nb = 0 THEN
+                nb := MAX;
+            END IF;
+
             RAISE NOTICE 'nb is %', nb;
-            SELECT MIN(d2t) INTO lb FROM TAb WHERE b = 0;
+            SELECT COALESCE(MIN(d2t), 0) INTO lb FROM TAb WHERE b = 0;
             RAISE NOTICE 'lb is %', lb;
         END IF;
 
@@ -252,7 +288,6 @@ BEGIN
 	$exp$, xid, xid);
 END;
 $$ LANGUAGE plpgsql;
-
 
 DO $$
 DECLARE

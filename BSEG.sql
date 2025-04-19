@@ -350,7 +350,7 @@ DECLARE
     xid VARCHAR(10) := '';
 BEGIN
     INSERT INTO TVisited (p2s, d2s, f, nid) VALUES ('s', 0, 0, 's');
-    INSERT INTO TVisited (nid, b, d2t, p2t) VALUES ('h', 0, 0, 'h');
+    INSERT INTO TVisited (nid, b, d2t, p2t) VALUES ('f', 0, 0, 'f');
 
     WHILE lb + lf <= min_cost AND nf > 0 AND nb > 0 LOOP
 
@@ -418,7 +418,7 @@ BEGIN
             SELECT fp.p2s, TVisited.p2s, depth + 1
             FROM forward_path fp, TVisited
             WHERE fp.p2s = TVisited.nid
-            AND fp.p2s <> TVisited.nid
+            AND TVisited.p2s <> TVisited.nid
         ),
         backward_path AS (
             SELECT nid, p2t

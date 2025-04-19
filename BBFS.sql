@@ -46,21 +46,26 @@ INSERT INTO TE VALUES
 CREATE OR REPLACE FUNCTION build_forward_er_view()
 RETURNS VOID AS $$
 BEGIN
-    UPDATE TAf
-    SET f = 2
-    WHERE TAf.d2s = (
-        SELECT MIN(d2s) FROM TAf 
-        WHERE TAf.f = 0
-    );
-
-    CREATE OR REPLACE VIEW er AS
+    -- UPDATE TAf
+    -- SET f = 2
+    -- WHERE TAf.d2s = (
+    --     SELECT MIN(d2s) FROM TAf 
+    --     WHERE TAf.f = 0
+    -- );
+    DROP MATERIALIZED VIEW IF EXISTS er;
+    CREATE MATERIALIZED VIEW er AS
     SELECT
         TE.tid            AS nid,
         TE.fid            AS p2s,
         TAf.d2s + TE.cost AS cost
     FROM TE, TAf
     WHERE TE.fid = TAf.nid
-    AND TAf.f = 2;
+    AND TAf.f = 0;
+
+    UPDATE TAf
+    SET f = 1
+    WHERE TAf.f = 0;
+
 END;
 $$ LANGUAGE plpgsql;
 
@@ -94,9 +99,9 @@ BEGIN
     GET DIAGNOSTICS affected_count = ROW_COUNT;
     RAISE NOTICE 'affected_count is %', affected_count;
 
-    UPDATE TAf
-    SET f = 1
-    WHERE TAf.f = 2;
+    -- UPDATE TAf
+    -- SET f = 1
+    -- WHERE TAf.f = 0;
 
     RETURN affected_count;    
 END;
@@ -105,21 +110,25 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION build_backward_er_view()
 RETURNS VOID AS $$
 BEGIN
-    UPDATE TAb
-    SET b = 2
-    WHERE TAb.d2t = (
-        SELECT MIN(d2t) FROM TAb 
-        WHERE TAb.b = 0
-    );
-
-    CREATE OR REPLACE VIEW er AS
+    -- UPDATE TAb
+    -- SET b = 2
+    -- WHERE TAb.d2t = (
+    --     SELECT MIN(d2t) FROM TAb 
+    --     WHERE TAb.b = 0
+    -- );
+    DROP MATERIALIZED VIEW IF EXISTS er;
+    CREATE MATERIALIZED VIEW er AS
     SELECT
         TE.fid            AS nid,
         TE.tid            AS p2s,
         TAb.d2t + TE.cost AS cost
     FROM TE, TAb
     WHERE TE.tid = TAb.nid
-    AND TAb.b = 2;
+    AND TAb.b = 0;
+
+    UPDATE TAb
+    SET b = 1
+    WHERE TAb.b = 0;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -153,9 +162,9 @@ BEGIN
     GET DIAGNOSTICS affected_count = ROW_COUNT;
     RAISE NOTICE 'affected_count is %', affected_count;
 
-    UPDATE TAb
-    SET b = 1
-    WHERE TAb.b = 2;
+    -- UPDATE TAb
+    -- SET b = 1
+    -- WHERE TAb.b = 0;
 
     RETURN affected_count;
 END;
@@ -177,18 +186,22 @@ DECLARE
     bwd INT := 1; 
     xid VARCHAR(10) := '';
 BEGIN
-    WHILE lb + lf < min_cost AND nf > 0 AND nb > 0 LOOP
+    WHILE lb + lf <= min_cost AND nf > 0 AND nb > 0 LOOP
 
         IF nf <= nb THEN
             PERFORM build_forward_er_view();
-            
+            IF nf = 0 THEN
+                nf := MAX;
+            END IF;
             nf := merge_forward();
             RAISE NOTICE 'nf is %', nf;
             SELECT MIN(d2s) INTO lf FROM TAf WHERE f = 0;
             RAISE NOTICE 'lf is %', lf;
         ELSE
             PERFORM build_backward_er_view();
-            
+            IF nb = 0 THEN
+                nb := MAX;
+            END IF;
             nb := merge_backward();
             RAISE NOTICE 'nb is %', nb;
             SELECT MIN(d2t) INTO lb FROM TAb WHERE b = 0;
