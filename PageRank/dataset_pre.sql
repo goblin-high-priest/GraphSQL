@@ -2,7 +2,7 @@ DROP TABLE IF EXISTS Nodes;
 CREATE TABLE Nodes (
     NodeId int not null,
     NodeWeight decimal(10, 5) not null,
-    NodeCount int not null default(0),
+    NodeCount int not null default 0,
     HasConverged boolean not null default false,
     constraint NodesPK primary key (NodeId)
 );
