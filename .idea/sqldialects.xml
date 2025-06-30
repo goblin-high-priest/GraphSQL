@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/PageRank/PAGERANK.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/PageRank/dataset_pre.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/SSSP/BBFS.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/SSSP/BRBFSw.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/graph_generator.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/test.sql" dialect="PostgreSQL" />
+    <file url="PROJECT" dialect="PostgreSQL" />
+  </component>
+</project>
