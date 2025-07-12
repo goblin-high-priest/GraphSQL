@@ -7,6 +7,8 @@
     <file url="file://$PROJECT_DIR$/PageRank/dataset_pre.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/SPSP/BBFS.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/SPSP/BRBFSw.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/TopoSort/TOPOSORT.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/TopoSort/dataset_pre.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/graph_generator.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/test.sql" dialect="PostgreSQL" />
     <file url="PROJECT" dialect="PostgreSQL" />
