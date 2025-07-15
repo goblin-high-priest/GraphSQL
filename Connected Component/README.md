@@ -2,158 +2,125 @@
 
 Perhaps the simplest approach to performing in-database connected components analysis is to begin by choosing for each vertex a representative by picking the vertex with the minimum ID among the vertex itself and all its neighbours, then to improve on that representative by taking the minimum ID among the *representatives* of the vertex itself and all its neighbours, and to continue in this fashion until no vertex changes its choice of representative. We refer to this naive approach as the “Breadth First Search” strategy: after n steps each vertex’s representative is the vertex with the minimum ID among all vertices in the connected component that are at most at distance n from the original vertex. Though the algorithm ultimately terminates and delivers the correct result, its worst-case runtime makes it unsuitable for Big Data. Consider, for example, the sequentially numbered path graph with IDs 1, 2, . . . , n. For this graph, Breadth First Search will take n − 1 steps.
 
-# paper method
+# paper method (without randomised)
 
-好的！我们来构造一个稍微复杂一点的例子，图中包含多个连通分量和多个层级的“传播”，从而更清楚地展示 **Randomised Contraction（随机收缩）** 是如何逐轮缩小图并找到连通分量的。
-
-------
-
-## 🧠 示例图 G₀（初始图）
+## Example Graph G₀ (Initial Graph)
 
 ```
-lua
 
+Connected Component 1:      Connected Component 2:
 
-复制编辑
-连通分量1：      连通分量2：
-
-1---2---3        6---7
- \     |         |
-  \    |         8
+1---2---3                   6---7
+ \     |                    |
+  \    |                    8
    \   |
      4---5
 
-单独节点： 9
+Isolated Node: 9
 ```
 
-### 🔢 顶点 V₀：
+### Vertex Set V₀:
 
 ```
-复制编辑
-{1,2,3,4,5,6,7,8,9}
+{1, 2, 3, 4, 5, 6, 7, 8, 9}
 ```
 
-### 🔗 边 E₀：
+### Edge Set E₀:
 
 ```
-scss
 
-
-复制编辑
 (1,2), (1,4), (2,3), (3,4), (4,5)
 (6,7), (6,8)
 ```
 
-共 9 个点，分为 3 个连通分量：
+There are 9 nodes in total, forming 3 connected components:
 
 - {1,2,3,4,5}
 - {6,7,8}
-- {9}（孤立节点）
+- {9} (isolated node)
 
 ------
 
-## 🔁 第 1 步：为每个点选择代表（闭邻域中最小 ID）
+## Step 1: Assign representatives (minimum ID in closed neighborhood)
 
-| 顶点 | 邻居  | 闭邻域  | 代表（最小 ID） |
-| ---- | ----- | ------- | --------------- |
-| 1    | 2,4   | 1,2,4   | 1               |
-| 2    | 1,3   | 1,2,3   | 1               |
-| 3    | 2,4   | 2,3,4   | 2               |
-| 4    | 1,3,5 | 1,3,4,5 | 1               |
-| 5    | 4     | 4,5     | 4               |
-| 6    | 7,8   | 6,7,8   | 6               |
-| 7    | 6     | 6,7     | 6               |
-| 8    | 6     | 6,8     | 6               |
-| 9    | —     | 9       | 9               |
+| Node | Neighbors | Closed Neighborhood | Representative |
+| ---- | --------- | ------------------- | -------------- |
+| 1    | 2, 4      | 1, 2, 4             | 1              |
+| 2    | 1, 3      | 1, 2, 3             | 1              |
+| 3    | 2, 4      | 2, 3, 4             | 2              |
+| 4    | 1, 3, 5   | 1, 3, 4, 5          | 1              |
+| 5    | 4         | 4, 5                | 4              |
+| 6    | 7, 8      | 6, 7, 8             | 6              |
+| 7    | 6         | 6, 7                | 6              |
+| 8    | 6         | 6, 8                | 6              |
+| 9    | —         | 9                   | 9              |
 
 
 
 ------
 
-## 🔁 构造收缩图 G₁
+## Build Contracted Graph G₁
 
-我们根据上面的代表构造新图：
+For each edge (v, w), retain (r(v), r(w)) only if r(v) ≠ r(w):
 
-### 顶点集合 V₁：
+- (1,2) → (1,1) → dropped
+- (1,4) → (1,1) → dropped
+- (2,3) → (1,2) → kept
+- (3,4) → (2,1) → kept
+- (4,5) → (1,4) → kept
+- (6,7), (6,8), (7,6) → all become (6,6) → dropped
 
-```
-复制编辑
-{1,2,4,6,9}
-```
-
-### 边集合 E₁：
-
-遍历原图每条边 `(v, w)`，如果 `r(v) ≠ r(w)`，就保留一条 `(r(v), r(w))`：
-
-- (1,2) → (1,1) → 忽略
-- (1,4) → (1,1) → 忽略
-- (2,3) → (1,2) → ✅ 保留 (1,2)
-- (3,4) → (2,1) → ✅ 保留 (2,1)
-- (4,5) → (1,4) → ✅ 保留 (1,4)
-- (6,7), (6,8), (7,6) → 都是 (6,6) → 忽略
-- 9 是孤立 → 保留
-
-最终：
+Final edge set:
 
 ```
-mathematica
-
-
-复制编辑
-E₁ = {(1,2), (1,4), (2,1)} （等价于 1–2, 1–4）
+(1,2), (2,1), (1,4)
 ```
 
-图 G₁：
+Graph G₁ becomes:
 
 ```
-lua
 
-
-复制编辑
 1---2
 |
 4
 
-6   9 （孤立）
+6   9
 ```
 
 ------
 
-## 🔁 第 2 步：再次收缩
+## Step 2: Assign representatives again
 
-再次选代表：
-
-| 顶点 | 邻居 | 闭邻域 | 代表 |
-| ---- | ---- | ------ | ---- |
-| 1    | 2,4  | 1,2,4  | 1    |
-| 2    | 1    | 1,2    | 1    |
-| 4    | 1    | 1,4    | 1    |
-| 6    | —    | 6      | 6    |
-| 9    | —    | 9      | 9    |
+| Node | Neighbors | Closed Neighborhood | Representative |
+| ---- | --------- | ------------------- | -------------- |
+| 1    | 2, 4      | 1, 2, 4             | 1              |
+| 2    | 1         | 1, 2                | 1              |
+| 4    | 1         | 1, 4                | 1              |
+| 6    | —         | 6                   | 6              |
+| 9    | —         | 9                   | 9              |
 
 
 
 ------
 
-## 🔁 构造收缩图 G₂
+## Build Contracted Graph G₂
 
-- 所有 {1,2,4} 都指向 1 → 合并
-- 没有新边了，只剩孤立点
+All nodes {1,2,4} are mapped to 1 → merged
+ No more new edges remain. Only isolated nodes left.
 
-最终 G₂ 的顶点是：
+Vertex set of G₂:
 
 ```
-复制编辑
-{1,6,9}（均为孤立点）
+{1, 6, 9}
 ```
 
 ------
 
-## ✅ 最终结果：每个顶点归属的连通分量 ID
+## Final Result: Connected Component Labels for Each Node
 
-从 r₁ 和 r₂ 合并的映射：
+Backtracking through r₁ and r₂ gives the final mapping:
 
-| 顶点 | r₁   | r₂(r₁) | 最终分量 ID |
+| Node | r₁   | r₂(r₁) | Final Label |
 | ---- | ---- | ------ | ----------- |
 | 1    | 1    | 1      | 1           |
 | 2    | 1    | 1      | 1           |
@@ -169,29 +136,24 @@ lua
 
 ------
 
-## 🎯 输出：
-
-每个顶点对应的连通分量 ID：
+## Output
 
 ```
 diff
 
 
 复制编辑
-+-------+---------------------+
-| 顶点  | 连通分量 ID (label) |
-+-------+---------------------+
-| 1     | 1                   |
-| 2     | 1                   |
-| 3     | 1                   |
-| 4     | 1                   |
-| 5     | 1                   |
-| 6     | 6                   |
-| 7     | 6                   |
-| 8     | 6                   |
-| 9     | 9                   |
-+-------+---------------------+
++-------+------------------+
+| Node  | Connected Label  |
++-------+------------------+
+| 1     | 1                |
+| 2     | 1                |
+| 3     | 1                |
+| 4     | 1                |
+| 5     | 1                |
+| 6     | 6                |
+| 7     | 6                |
+| 8     | 6                |
+| 9     | 9                |
++-------+------------------+
 ```
-
-------
-
