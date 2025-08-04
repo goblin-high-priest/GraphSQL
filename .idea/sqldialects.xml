@@ -5,6 +5,9 @@
     <file url="file://$PROJECT_DIR$/06_SSSP/data_pre.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/07_APSP/Floyd-Warshall.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/07_APSP/data_pre.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/08_Minimum Spanning Tree/Kruskal.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/08_Minimum Spanning Tree/Prim.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/08_Minimum Spanning Tree/data_pre.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/graph_generator.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/test.sql" dialect="PostgreSQL" />
     <file url="PROJECT" dialect="PostgreSQL" />
