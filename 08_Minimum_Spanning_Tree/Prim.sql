@@ -18,7 +18,7 @@ DECLARE
     nb_r   INT;
     nb_w   NUMERIC;
 BEGIN
-    /* ---------- 映射 ---------- */
+
     WITH v AS (
         SELECT id, row_number() OVER (ORDER BY id) AS rn
         FROM vertices
@@ -36,7 +36,6 @@ BEGIN
         RAISE EXCEPTION 'vertices table is empty';
     END IF;
 
-    /* ---------- 初始化 ---------- */
     v_key    := array_fill(v_inf      , ARRAY[v_n]);
     v_parent := array_fill(NULL::INT  , ARRAY[v_n]);
     v_done   := array_fill(FALSE      , ARRAY[v_n]);
@@ -47,7 +46,6 @@ BEGIN
     r := v_pos[start_id];
     v_key[r] := 0;
 
-    /* ---------- Prim 主循环 ---------- */
     FOR _step IN 1..v_n LOOP
         min_w := v_inf;  min_r := NULL;
         FOR r IN 1..v_n LOOP

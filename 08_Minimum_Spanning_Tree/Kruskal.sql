@@ -2,7 +2,6 @@ CREATE OR REPLACE FUNCTION kruskal_mst()
 RETURNS TABLE(src INT, dst INT, weight NUMERIC) AS
 $$
 DECLARE
-    /* ---------- 映射顶点 id ↔ 行号 ---------- */
     id_arr  INT[];   -- row_number → vertex_id   (长度 n)
     pos_arr INT[];   -- vertex_id  → row_number  (下标 = id，本例 id 连续)
 
@@ -13,7 +12,7 @@ DECLARE
     e       RECORD;  -- 遍历边
     r1 INT; r2 INT;  -- 两端根
 BEGIN
-    /* ---- ① 顶点映射 ---- */
+
     WITH v AS (
         SELECT id,
                row_number() OVER (ORDER BY id) AS rn
@@ -32,11 +31,9 @@ BEGIN
         RAISE EXCEPTION 'vertices 表为空';
     END IF;
 
-    /* ---- ② 初始化并查集 ---- */
     parent := array(SELECT generate_series(1, n));  -- 1,2,3,...
     rank   := array_fill(0, ARRAY[n]);
 
-    /* ---- ③ Kruskal 主循环：权重升序扫描边 ---- */
     FOR e IN
         SELECT u, v, w
         FROM   edges
@@ -56,7 +53,6 @@ BEGIN
             r2 := parent[r2];
         END LOOP;
 
-        /* 若不在同一集合，合并 + 输出边 */
         IF r1 <> r2 THEN
             -- union by rank
             IF rank[r1] < rank[r2] THEN
@@ -77,6 +73,5 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
--- 图已按照 A=1,B=2,… 插入 vertices / edges
 SELECT * FROM kruskal_mst()
 ORDER BY weight;
