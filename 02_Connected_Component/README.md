@@ -139,10 +139,6 @@ Backtracking through r₁ and r₂ gives the final mapping:
 ## Output
 
 ```
-diff
-
-
-复制编辑
 +-------+------------------+
 | Node  | Connected Label  |
 +-------+------------------+
